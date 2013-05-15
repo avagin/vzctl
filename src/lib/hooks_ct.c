@@ -224,26 +224,49 @@ static int _env_create(void *data)
 	return exec_container_init(arg, &create_param);
 }
 
-static int ct_env_create(struct arg_start *arg)
+static int ct_env_create_real(struct arg_start *arg)
 {
 
 	long stack_size;
 	char *child_stack;
 	int clone_flags;
 	int ret;
-	char procpath[STR_SIZE];
-	char ctpath[STR_SIZE];
 
 	stack_size = get_pagesize();
 	if (stack_size < 0)
-		return VZ_RESOURCE_ERROR;
+		return -1;
 
 	child_stack = alloca(stack_size);
 	if (child_stack == NULL) {
 		logger(-1, 0, "Unable to alloc");
-		return VZ_RESOURCE_ERROR;
+		return -1;
 	}
 	child_stack += stack_size;
+
+	/*
+	 * Belong in the setup phase
+	 */
+	clone_flags = SIGCHLD;
+	/* FIXME: USERNS is still work in progress */
+	clone_flags |= CLONE_NEWUTS|CLONE_NEWPID|CLONE_NEWIPC;
+	clone_flags |= CLONE_NEWNET|CLONE_NEWNS;
+
+	ret = clone(_env_create, child_stack, clone_flags, arg);
+	if (ret  < 0) {
+		logger(-1, errno, "Unable to clone");
+		/* FIXME: remove ourselves from container first */
+		destroy_container(arg->veid);
+		return -1;
+	}
+
+	return 0;
+}
+
+int ct_env_create(struct arg_start *arg)
+{
+	int ret;
+	char procpath[STR_SIZE];
+	char ctpath[STR_SIZE];
 
 	/* non-fatal */
 	if ((ret = ct_destroy(arg->h, arg->veid)))
@@ -268,21 +291,9 @@ static int ct_env_create(struct arg_start *arg)
 		return VZ_RESOURCE_ERROR;
 	}
 
-	/*
-	 * Belong in the setup phase
-	 */
-	clone_flags = SIGCHLD;
-	/* FIXME: USERNS is still work in progress */
-	clone_flags |= CLONE_NEWUTS|CLONE_NEWPID|CLONE_NEWIPC;
-	clone_flags |= CLONE_NEWNET|CLONE_NEWNS;
-
-	ret = clone(_env_create, child_stack, clone_flags, arg);
-	if (ret  < 0) {
-		logger(-1, errno, "Unable to clone");
-		/* FIXME: remove ourselves from container first */
-		destroy_container(arg->veid);
+	ret = ct_env_create_real(arg);
+	if (ret < 0)
 		return VZ_RESOURCE_ERROR;
-	}
 
 	snprintf(procpath, STR_SIZE, "/proc/%d/ns/net", ret);
 	ret = symlink(procpath, ctpath);
