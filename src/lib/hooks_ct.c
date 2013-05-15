@@ -86,6 +86,10 @@ static int ct_destroy(vps_handler *h, envid_t veid)
 
 	snprintf(ctpath, STR_SIZE, "%s/%d", NETNS_RUN_DIR, veid);
 	unlink(ctpath);
+
+	get_state_file(veid, ctpath, sizeof(ctpath));
+	unlink(ctpath);
+
 	return destroy_container(veid);
 }
 
@@ -230,7 +234,8 @@ static int ct_env_create_real(struct arg_start *arg)
 	long stack_size;
 	char *child_stack;
 	int clone_flags;
-	int ret;
+	int ret, fd;
+	char pidpath[STR_SIZE];
 
 	stack_size = get_pagesize();
 	if (stack_size < 0)
@@ -251,15 +256,26 @@ static int ct_env_create_real(struct arg_start *arg)
 	clone_flags |= CLONE_NEWUTS|CLONE_NEWPID|CLONE_NEWIPC;
 	clone_flags |= CLONE_NEWNET|CLONE_NEWNS;
 
+	get_state_file(arg->veid, pidpath, sizeof(pidpath));
+	fd = open(pidpath, O_WRONLY | O_TRUNC | O_CREAT | O_CLOEXEC, 0600);
+	if (fd == -1) {
+		logger(-1, errno, "Unable to create a state file %s", pidpath);
+		return VZ_RESOURCE_ERROR;
+	}
+
 	ret = clone(_env_create, child_stack, clone_flags, arg);
 	if (ret  < 0) {
+		close(fd);
 		logger(-1, errno, "Unable to clone");
 		/* FIXME: remove ourselves from container first */
 		destroy_container(arg->veid);
 		return -1;
 	}
 
-	return 0;
+	dprintf(fd, "%d", ret);
+	close(fd);
+
+	return ret;
 }
 
 int ct_env_create(struct arg_start *arg)
