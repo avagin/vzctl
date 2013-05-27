@@ -815,7 +815,7 @@ static int ct_ip_ctl(vps_handler *h, envid_t veid, int op, const char *ipstr)
 static int ct_veth_ctl(vps_handler *h, envid_t veid, int op, veth_dev *dev)
 {
 	int ret = -1;
-	char *envp[10];
+	char *envp[11];
 	char buf[STR_SIZE];
 	int i = 0;
 
@@ -846,6 +846,12 @@ static int ct_veth_ctl(vps_handler *h, envid_t veid, int op, veth_dev *dev)
 		snprintf(buf, sizeof(buf), "BRIDGE=%s", dev->dev_bridge);
 		envp[i++] = strdup(buf);
 	}
+
+	if (op == ADD)
+		snprintf(buf, sizeof(buf), "ACTION=add");
+	else
+		snprintf(buf, sizeof(buf), "ACTION=cfg");
+	envp[i++] = strdup(buf);
 
 	envp[i] = NULL;
 
@@ -915,7 +921,7 @@ static int ct_chkpnt(vps_handler *h, envid_t veid,
 	return ret;
 }
 
-static int ct_restore_fn(vps_handler *h, envid_t veid, const fs_param *fs,
+static int ct_restore_fn(vps_handler *h, envid_t veid, const vps_res *res,
 			  int wait_p, int old_wait_p, int err_p, void *data)
 {
 	char *argv[2], *env[4];
@@ -970,7 +976,7 @@ static int ct_restore(vps_handler *h, envid_t veid, vps_param *vps_p, int cmd,
 	cpt_param *param, skipFlags skip)
 {
 	return vps_start_custom(h, veid, vps_p,
-			SKIP_CONFIGURE | SKIP_ACTION_SCRIPT | skip,
+			SKIP_CONFIGURE | SKIP_ACTION_SCRIPT | SKIP_VETH_CREATE | skip,
 			NULL, ct_restore_fn, param);
 }
 
