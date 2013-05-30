@@ -924,7 +924,7 @@ static int ct_chkpnt(vps_handler *h, envid_t veid,
 static int ct_restore_fn(vps_handler *h, envid_t veid, const vps_res *res,
 			  int wait_p, int old_wait_p, int err_p, void *data)
 {
-	char *argv[2], *env[6];
+	char *argv[2], *env[10];
 	const char *dumpfile = NULL;
 	const char *statefile = NULL;
 	cpt_param *param = data;
@@ -959,8 +959,15 @@ static int ct_restore_fn(vps_handler *h, envid_t veid, const vps_res *res,
 	env[3] = strdup(buf);
 	snprintf(buf, sizeof(buf), "CMD=RESUME");
 	env[4] = strdup(buf);
-
-	env[5] = NULL;
+	snprintf(buf, sizeof(buf), "NS_SCRIPT=%s", SCRIPTDIR "/vps-rst-env");
+	env[5] = strdup(buf);
+	snprintf(buf, sizeof(buf), "VZCTL_PID=%d", getpid());
+	env[6] = strdup(buf);
+	snprintf(buf, sizeof(buf), "STATUSFD=%d", STDIN_FILENO);
+	env[7] = strdup(buf);
+	snprintf(buf, sizeof(buf), "WAITFD=%d", wait_p);
+	env[8] = strdup(buf);
+	env[9] = NULL;
 
 	ret = run_script(argv[0], argv, env, 0);
 	free_arg(env);

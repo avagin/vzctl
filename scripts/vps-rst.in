@@ -26,6 +26,7 @@
 #   VE_DUMP_DIR   - directory for saving dump files
 #   VE_STATE_FILE - file to write CT init PID to
 #   VE_VETH_DEVS  - pair of veth names (CT=HW\n)
+#   NS_SCRIPT     - script, which will be executed after creating namespaces
 
 exec 1>&2
 . @SCRIPTDIR@/vps-functions
@@ -43,6 +44,7 @@ fi
 vzcheckvar VE_ROOT
 vzcheckvar VE_STATE_FILE
 vzcheckvar VE_VETH_DEVS
+vzcheckvar NS_SCRIPT
 
 veth_args=""
 for dev in $VE_VETH_DEVS; do
@@ -55,6 +57,7 @@ criu restore	--file-locks		\
 		--link-remap		\
 		--root $VE_ROOT		\
 		--restore-detached	\
+		--action-script $NS_SCRIPT \
 		-D $VE_DUMP_DIR		\
 		-o restore.log		\
 		-vvvv			\
