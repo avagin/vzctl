@@ -694,6 +694,9 @@ int vps_start_custom(vps_handler *h, envid_t veid, vps_param *param,
 			}
 		}
 	}
+	logger(0, 0, "%s:%d", __func__, __LINE__);
+	sleep(10);
+	logger(0, 0, "%s:%d", __func__, __LINE__);
 	/* Tell the child that it's time to start /sbin/init */
 	if (write(wait_p[1], &ret, sizeof(ret)) != sizeof(ret))
 		logger(-1, errno, "Unable to write to waitfd to start init");
