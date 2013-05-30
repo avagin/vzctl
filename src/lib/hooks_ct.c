@@ -924,7 +924,7 @@ static int ct_chkpnt(vps_handler *h, envid_t veid,
 static int ct_restore_fn(vps_handler *h, envid_t veid, const vps_res *res,
 			  int wait_p, int old_wait_p, int err_p, void *data)
 {
-	char *argv[2], *env[5];
+	char *argv[2], *env[6];
 	const char *dumpfile = NULL;
 	const char *statefile = NULL;
 	cpt_param *param = data;
@@ -957,8 +957,10 @@ static int ct_restore_fn(vps_handler *h, envid_t veid, const vps_res *res,
 				"%s=%s\n", veth->dev_name_ve, veth->dev_name);
 	}
 	env[3] = strdup(buf);
+	snprintf(buf, sizeof(buf), "CMD=RESUME");
+	env[4] = strdup(buf);
 
-	env[4] = NULL;
+	env[5] = NULL;
 
 	ret = run_script(argv[0], argv, env, 0);
 	free_arg(env);
@@ -985,6 +987,31 @@ err_destroy:
 static int ct_restore(vps_handler *h, envid_t veid, vps_param *vps_p, int cmd,
 	cpt_param *param, skipFlags skip)
 {
+	if (cmd == CMD_CLEANUP) {
+		char dumpfile[STR_SIZE], buf[STR_SIZE];
+		char *argv[2];
+		char *env[3];
+		int ret;
+
+		argv[0] = SCRIPTDIR "/vps-rst";
+		argv[1] = NULL;
+
+		get_dump_file(veid, param ? param->dumpdir : NULL,
+					dumpfile, sizeof(dumpfile));
+		snprintf(buf, sizeof(buf), "VE_DUMP_DIR=%s", dumpfile);
+		env[0] = strdup(buf);
+		snprintf(buf, sizeof(buf), "CMD=CLEANUP");
+		env[1] = strdup(buf);
+		env[2] = NULL;
+
+		ret = run_script(argv[0], argv, env, 0);
+		free_arg(env);
+		if (ret)
+			return VZ_RESTORE_ERROR;
+
+		return 0;
+	}
+
 	return vps_start_custom(h, veid, vps_p,
 			SKIP_CONFIGURE | SKIP_ACTION_SCRIPT | SKIP_VETH_CREATE | skip,
 			NULL, ct_restore_fn, param);

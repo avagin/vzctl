@@ -30,9 +30,18 @@
 exec 1>&2
 . @SCRIPTDIR@/vps-functions
 
+vzcheckvar CMD
+vzcheckvar VE_DUMP_DIR
+
+if [ "$CMD" = "CLEANUP" ]; then
+	[ -d $VE_DUMP_DIR ] || exit 0
+	echo Stale CT dump directory $VE_DUMP_DIR found, removing
+	rm -rf $VE_DUMP_DIR
+	exit
+fi
+
 vzcheckvar VE_ROOT
 vzcheckvar VE_STATE_FILE
-vzcheckvar VE_DUMP_DIR
 vzcheckvar VE_VETH_DEVS
 
 veth_args=""

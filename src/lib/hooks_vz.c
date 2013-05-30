@@ -795,13 +795,25 @@ err_undump:
 static int vz_restore(vps_handler *h, envid_t veid, vps_param *vps_p,
 			int cmd, cpt_param *param, skipFlags skip)
 {
-	int ret, rst_fd;
-	int dump_fd = -1;
+	int ret, dump_fd = -1, rst_fd = -1;
 	char buf[PATH_LEN];
 	const char *dumpfile = NULL;
 
-	logger(0, 0, "Restoring container ...");
 	ret = VZ_RESTORE_ERROR;
+	GET_DUMP_FILE(CMD_UNDUMP);
+
+	if (cmd == CMD_CLEANUP) {
+		if (stat_file(dumpfile) == 1) {
+			logger(0, 0, "Stale CT dump file %s found, removing", dumpfile);
+			if (unlink(dumpfile) < 0) {
+				logger(-1, 0, "Can't unlink %s", dumpfile);
+				return VZ_RESTORE_ERROR;
+			}
+		}
+		return 0;
+	}
+
+	logger(0, 0, "Restoring container ...");
 	if ((rst_fd = open(PROC_RST, O_RDWR)) < 0) {
 		if (errno == ENOENT)
 			logger(-1, errno, "Error: No checkpointing"
@@ -816,7 +828,6 @@ static int vz_restore(vps_handler *h, envid_t veid, vps_param *vps_p,
 			goto err;
 		}
 	}
-	GET_DUMP_FILE(CMD_UNDUMP);
 	if (cmd == CMD_RESTORE || cmd == CMD_UNDUMP) {
 		dump_fd = open(dumpfile, O_RDONLY);
 		if (dump_fd < 0) {
@@ -838,7 +849,8 @@ static int vz_restore(vps_handler *h, envid_t veid, vps_param *vps_p,
 	if (ret)
 		goto err;
 err:
-	close(rst_fd);
+	if (rst_fd != -1)
+		close(rst_fd);
 	if (dump_fd != -1)
 		close(dump_fd);
 	if (!ret) {

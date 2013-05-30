@@ -11,13 +11,14 @@
 #define CMD_DUMP		3
 #define CMD_RESTORE		4
 #define CMD_UNDUMP		5
+#define CMD_CLEANUP		6
 
 #define CMD_KILL		10
 #define CMD_RESUME		11
 
 #define GET_DUMP_FILE(req_cmd)							\
 do {										\
-	dumpfile = param->dumpfile;						\
+	dumpfile = param ? param->dumpfile : NULL;				\
 	if (dumpfile == NULL) {							\
 		if (cmd == req_cmd) {						\
 			logger(-1,  0, "Error: dumpfile is not specified");	\

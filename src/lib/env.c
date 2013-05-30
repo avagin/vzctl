@@ -779,15 +779,7 @@ int vps_start(vps_handler *h, envid_t veid, vps_param *param,
 		/* Start was successful, remove the default dump file:
 		 * it is now useless and inconsistent with the fs state
 		 */
-		char buf[STR_SIZE];
-
-		get_dump_file(veid, param->res.cpt.dumpdir, buf, sizeof(buf));
-		if (stat_file(buf) == 1) {
-			logger(0, 0, "Stale CT dump file %s found, removing",
-					buf);
-			if (unlink(buf) < 0)
-				logger(-1, 0, "Can't unlink %s", buf);
-		}
+		h->env_restore(h, veid, param, CMD_CLEANUP, NULL, 0);
 	}
 
 	return ret;
