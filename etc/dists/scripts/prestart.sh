@@ -62,7 +62,7 @@ fixup_loginuid()
 [ "x$VZ_KERNEL" = "xyes" ] && exit 0
 [ "x$USERNS" = "xno" ] && exit 0
 
-fixup_udev &
+fixup_udev
 fixup_loginuid
 
 exit 0
